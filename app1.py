@@ -1,143 +1,175 @@
-import streamlit as st
-import cv2
-import numpy as np
-import pytesseract
-from PIL import Image
-
-
-# ---------------- DISEÑO ----------------
 st.markdown("""
 <style>
+
+/* =========================
+   FONDO DE AGUA
+   ========================= */
 
 .stApp {
     background:
         linear-gradient(
             180deg,
-            #dff7ff 0%,
-            #a8e5f2 25%,
-            #70cbdc 50%,
-            #4aaabd 75%,
-            #258da5 100%
+            #d9f8ff 0%,
+            #8ed9e8 35%,
+            #48b5c9 70%,
+            #167d98 100%
         );
-    background-size: 100% 200%;
-    animation: agua 8s ease-in-out infinite alternate;
+
+    overflow: hidden;
 }
 
-/* Efecto de ondas/reflejos */
+/* Ondas grandes */
 .stApp::before {
     content: "";
     position: fixed;
+    left: -10%;
     top: 0;
-    left: 0;
-    width: 100%;
+    width: 120%;
     height: 100%;
 
     background:
-        repeating-linear-gradient(
-            0deg,
-            rgba(255,255,255,0.10) 0px,
-            rgba(255,255,255,0.10) 2px,
-            transparent 3px,
-            transparent 12px
+        repeating-radial-gradient(
+            ellipse at 50% 100%,
+            rgba(255,255,255,0.20) 0px,
+            rgba(255,255,255,0.08) 3px,
+            transparent 8px,
+            transparent 25px
         );
 
-    opacity: 0.5;
+    opacity: 0.45;
     pointer-events: none;
 
-    animation: ondas 5s linear infinite;
+    animation: movimientoAgua 8s ease-in-out infinite;
 }
 
-/* Título */
+/* Reflejos de luz */
+.stApp::after {
+    content: "";
+    position: fixed;
+    top: -20%;
+    left: -30%;
+
+    width: 160%;
+    height: 140%;
+
+    background:
+        repeating-linear-gradient(
+            100deg,
+            transparent 0px,
+            transparent 35px,
+            rgba(255,255,255,0.12) 40px,
+            transparent 48px,
+            transparent 80px
+        );
+
+    opacity: 0.35;
+    pointer-events: none;
+
+    animation: reflejos 12s linear infinite;
+}
+
+
+/* =========================
+   TÍTULO
+   ========================= */
+
 h1 {
     text-align: center;
     color: white;
-    font-weight: 700;
+
     text-shadow:
-        0px 2px 4px rgba(0,80,110,0.5),
-        0px 0px 15px rgba(255,255,255,0.4);
+        0px 2px 5px rgba(0,60,90,0.5),
+        0px 0px 20px rgba(255,255,255,0.5);
 }
 
-/* Texto */
-p, label, .stRadio label {
-    color: white !important;
-}
 
-/* Cámara */
-[data-testid="stCameraInput"] {
-    background: rgba(255,255,255,0.15);
-    padding: 15px;
-    border-radius: 20px;
-    backdrop-filter: blur(8px);
-    box-shadow:
-        0 8px 25px rgba(0,70,100,0.25),
-        inset 0 1px 8px rgba(255,255,255,0.35);
-}
+/* =========================
+   SIDEBAR
+   ========================= */
 
-/* Sidebar */
 [data-testid="stSidebar"] {
     background:
         linear-gradient(
             180deg,
-            rgba(20,130,160,0.85),
-            rgba(10,80,110,0.9)
+            rgba(15,125,155,0.90),
+            rgba(5,65,95,0.95)
         );
+
+    backdrop-filter: blur(10px);
 }
 
-/* Caja del texto reconocido */
-.stText, .stMarkdown {
-    text-shadow: 0px 1px 3px rgba(0,60,80,0.35);
+
+/* =========================
+   CÁMARA
+   ========================= */
+
+[data-testid="stCameraInput"] {
+    background: rgba(255,255,255,0.15);
+
+    padding: 15px;
+
+    border-radius: 20px;
+
+    backdrop-filter: blur(10px);
+
+    box-shadow:
+        0 10px 30px rgba(0,60,90,0.30),
+        inset 0 1px 10px rgba(255,255,255,0.35);
 }
 
-/* Animación del agua */
-@keyframes agua {
-    from {
-        background-position: 0% 0%;
+
+/* =========================
+   TEXTO
+   ========================= */
+
+p, label, .stRadio label {
+    color: white !important;
+}
+
+
+/* =========================
+   ANIMACIONES
+   ========================= */
+
+@keyframes movimientoAgua {
+
+    0% {
+        transform:
+            translateX(-3%)
+            translateY(0px)
+            scale(1);
     }
 
-    to {
-        background-position: 0% 100%;
+    50% {
+        transform:
+            translateX(3%)
+            translateY(12px)
+            scale(1.04);
+    }
+
+    100% {
+        transform:
+            translateX(-2%)
+            translateY(-8px)
+            scale(1.02);
     }
 }
 
-/* Movimiento de ondas */
-@keyframes ondas {
-    from {
-        transform: translateY(0px);
+
+@keyframes reflejos {
+
+    0% {
+        transform: translateX(-10%);
     }
 
-    to {
-        transform: translateY(18px);
+    50% {
+        transform: translateX(10%);
+    }
+
+    100% {
+        transform: translateX(-10%);
     }
 }
 
 </style>
 """, unsafe_allow_html=True)
-
-
-# ---------------- PROGRAMA ORIGINAL ----------------
-
-st.title("Reconocimiento óptico de Caracteres")
-
-img_file_buffer = st.camera_input("Toma una Foto")
-
-with st.sidebar:
-      filtro = st.radio("Aplicar Filtro",('Con Filtro', 'Sin Filtro'))
-
-
-if img_file_buffer is not None:
-    # To read image file buffer with OpenCV:
-    bytes_data = img_file_buffer.getvalue()
-    cv2_img = cv2.imdecode(
-        np.frombuffer(bytes_data, np.uint8),
-        cv2.IMREAD_COLOR
-    )
-    
-    if filtro == 'Con Filtro':
-         cv2_img = cv2.bitwise_not(cv2_img)
-    else:
-         cv2_img = cv2_img
-    
-        
-    img_rgb = cv2.cvtColor(cv2_img, cv2.COLOR_BGR2RGB)
-    text = pytesseract.image_to_string(img_rgb)
-    st.write(text)
