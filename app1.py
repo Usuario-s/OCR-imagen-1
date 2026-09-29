@@ -116,7 +116,7 @@ p, label, .stRadio label {
 
 # ---------------- PROGRAMA ORIGINAL ----------------
 
-st.title("Reconocimiento óptico de Caracteres")
+st.title("Reconocimiento de imagen")
 
 img_file_buffer = st.camera_input("Toma una Foto")
 
